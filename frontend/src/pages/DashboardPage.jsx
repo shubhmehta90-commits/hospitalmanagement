@@ -1,46 +1,86 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
-
-const roleStats = {
-  ADMIN: [
-    { label: 'Total Patients', value: '2,845', icon: '👥', color: 'purple' },
-    { label: 'Active Doctors', value: '48', icon: '🩺', color: 'teal' },
-    { label: 'Today\'s Appointments', value: '124', icon: '📅', color: 'blue' },
-    { label: 'Revenue (Monthly)', value: '₹18.4L', icon: '💰', color: 'green' },
-  ],
-  DOCTOR: [
-    { label: 'My Patients', value: '156', icon: '👥', color: 'purple' },
-    { label: 'Today\'s Appointments', value: '12', icon: '📅', color: 'teal' },
-    { label: 'Pending Reports', value: '5', icon: '📋', color: 'orange' },
-    { label: 'Completed Today', value: '7', icon: '✅', color: 'green' },
-  ],
-  RECEPTIONIST: [
-    { label: 'Today\'s Check-ins', value: '34', icon: '📝', color: 'purple' },
-    { label: 'Upcoming Appointments', value: '67', icon: '📅', color: 'teal' },
-    { label: 'Pending Billing', value: '12', icon: '💳', color: 'orange' },
-    { label: 'Walk-in Patients', value: '8', icon: '🚶', color: 'blue' },
-  ],
-  PATIENT: [
-    { label: 'Upcoming Visits', value: '2', icon: '📅', color: 'purple' },
-    { label: 'Prescriptions', value: '4', icon: '💊', color: 'teal' },
-    { label: 'Lab Reports', value: '3', icon: '🔬', color: 'blue' },
-    { label: 'Bills Due', value: '1', icon: '💳', color: 'orange' },
-  ],
-};
-
-const recentActivity = [
-  { time: '10 min ago', text: 'New appointment scheduled — Dr. Sharma', type: 'info' },
-  { time: '25 min ago', text: 'Lab report uploaded for Patient #2841', type: 'success' },
-  { time: '1 hr ago', text: 'Billing completed — Invoice #HMS-4521', type: 'success' },
-  { time: '2 hrs ago', text: 'New patient registered — Rahul Verma', type: 'info' },
-  { time: '3 hrs ago', text: 'Prescription updated by Dr. Patel', type: 'warning' },
-];
+import { supabase } from '../lib/supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const role = user?.role || 'PATIENT';
-  const stats = roleStats[role] || roleStats.PATIENT;
+  const navigate = useNavigate();
+  const role = user?.role || 'patient';
   const greeting = getGreeting();
+
+  const [stats, setStats] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      let dynamicStats = [];
+      
+      if (role === 'admin') {
+        const { count: patientCount } = await supabase.from('patients').select('*', { count: 'exact', head: true });
+        const { count: doctorCount } = await supabase.from('doctors').select('*', { count: 'exact', head: true });
+        const { count: appointmentCount } = await supabase.from('appointments').select('*', { count: 'exact', head: true });
+        
+        dynamicStats = [
+          { label: 'Total Patients', value: patientCount || 0, icon: '👥', color: 'purple' },
+          { label: 'Active Doctors', value: doctorCount || 0, icon: '🩺', color: 'teal' },
+          { label: 'Total Appointments', value: appointmentCount || 0, icon: '📅', color: 'blue' },
+        ];
+      } else if (role === 'doctor') {
+        const { count: myAppointments } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('doctor_id', user.id);
+        
+        dynamicStats = [
+          { label: 'My Appointments', value: myAppointments || 0, icon: '📅', color: 'teal' },
+        ];
+      } else if (role === 'patient') {
+        const { count: upcoming } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('patient_id', user.id);
+        
+        dynamicStats = [
+          { label: 'My Visits', value: upcoming || 0, icon: '📅', color: 'purple' },
+        ];
+      }
+      setStats(dynamicStats);
+
+      // Fetch Recent Activity (last 5 appointments)
+      const { data: recentAppts } = await supabase
+        .from('appointments')
+        .select(`
+          id, 
+          date, 
+          status, 
+          profiles:patient_id (full_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      const mappedActivity = recentAppts?.map(a => ({
+        time: new Date(a.date).toLocaleDateString(),
+        text: `Appointment ${a.status} for ${a.profiles?.full_name || 'Patient'}`,
+        type: a.status === 'confirmed' ? 'success' : 'info'
+      })) || [];
+      
+      setActivity(mappedActivity);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.layout}>
@@ -50,10 +90,10 @@ export default function DashboardPage() {
         <header style={styles.header}>
           <div>
             <h1 style={styles.greeting}>
-              {greeting}, <span style={styles.name}>{user?.first_name || user?.username}</span> 👋
+              {greeting}, <span style={styles.name}>{user?.full_name || 'User'}</span> 👋
             </h1>
             <p style={styles.roleTag}>
-              <span style={styles.roleBadge}>{user?.role_display || role}</span>
+              <span style={styles.roleBadge}>{role}</span>
               <span style={styles.date}>{formatDate()}</span>
             </p>
           </div>
@@ -64,53 +104,79 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Stats Grid */}
-        <section style={styles.statsGrid} className="fade-in">
-          {stats.map((stat, i) => (
-            <div key={i} className={`stat-card ${stat.color}`} style={{ animationDelay: `${i * 0.1}s` }}>
-              <div className="stat-icon">{stat.icon}</div>
-              <div className="stat-value">{stat.value}</div>
-              <div className="stat-label">{stat.label}</div>
-            </div>
-          ))}
-        </section>
-
-        {/* Content Grid */}
-        <div style={styles.contentGrid}>
-          {/* Recent Activity */}
-          <div className="glass-card" style={styles.activityCard}>
-            <h2 style={styles.cardTitle}>Recent Activity</h2>
-            <div style={styles.activityList}>
-              {recentActivity.map((item, i) => (
-                <div key={i} style={styles.activityItem}>
-                  <div style={{
-                    ...styles.activityDot,
-                    background: item.type === 'success' ? 'var(--success)'
-                      : item.type === 'warning' ? 'var(--warning)'
-                      : 'var(--info)',
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={styles.activityText}>{item.text}</p>
-                    <span style={styles.activityTime}>{item.time}</span>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            Loading dashboard data...
+          </div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <section style={styles.statsGrid} className="fade-in">
+              {stats.length > 0 ? (
+                stats.map((stat, i) => (
+                  <div key={i} className={`stat-card ${stat.color}`} style={{ animationDelay: `${i * 0.1}s` }}>
+                    <div className="stat-icon">{stat.icon}</div>
+                    <div className="stat-value">{stat.value}</div>
+                    <div className="stat-label">{stat.label}</div>
                   </div>
+                ))
+              ) : (
+                <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '24px', textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-muted)' }}>No statistics available yet.</p>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+            </section>
 
-          {/* Quick Actions */}
-          <div className="glass-card" style={styles.actionsCard}>
-            <h2 style={styles.cardTitle}>Quick Actions</h2>
-            <div style={styles.actionsList}>
-              {getQuickActions(role).map((action, i) => (
-                <button key={i} style={styles.actionBtn} className="btn-ghost btn">
-                  <span style={{ fontSize: '1.25rem' }}>{action.icon}</span>
-                  <span>{action.label}</span>
-                </button>
-              ))}
+            {/* Content Grid */}
+            <div style={styles.contentGrid}>
+              {/* Recent Activity */}
+              <div className="glass-card" style={styles.activityCard}>
+                <h2 style={styles.cardTitle}>Recent Activity</h2>
+                <div style={styles.activityList}>
+                  {activity.length > 0 ? (
+                    activity.map((item, i) => (
+                      <div key={i} style={styles.activityItem}>
+                        <div style={{
+                          ...styles.activityDot,
+                          background: item.type === 'success' ? 'var(--success)'
+                            : item.type === 'warning' ? 'var(--warning)'
+                            : 'var(--info)',
+                        }} />
+                        <div style={{ flex: 1 }}>
+                          <p style={styles.activityText}>{item.text}</p>
+                          <span style={styles.activityTime}>{item.time}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No recent activity found.</p>
+                      <p style={{ fontSize: '0.75rem', marginTop: 8 }}>Start by adding your first record.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="glass-card" style={styles.actionsCard}>
+                <h2 style={styles.cardTitle}>Quick Actions</h2>
+                <div style={styles.actionsList}>
+                  {getQuickActions(role).map((action, i) => (
+                    <button 
+                      key={i} 
+                      style={styles.actionBtn} 
+                      className="btn-ghost btn"
+                      onClick={() => action.path && navigate(action.path)}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>{action.icon}</span>
+                      <span>{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
@@ -134,32 +200,22 @@ function formatDate() {
 
 function getQuickActions(role) {
   const actions = {
-    ADMIN: [
-      { icon: '➕', label: 'Add Doctor' },
-      { icon: '📊', label: 'View Reports' },
-      { icon: '👥', label: 'Manage Users' },
-      { icon: '⚙️', label: 'Settings' },
+    admin: [
+      { icon: '➕', label: 'Add Doctor', path: '/register' },
+      { icon: '📊', label: 'View Reports', path: '/appointments' },
+      { icon: '👥', label: 'Manage Users', path: '/patients' },
     ],
-    DOCTOR: [
-      { icon: '📅', label: 'View Schedule' },
-      { icon: '📋', label: 'Write Prescription' },
-      { icon: '🔬', label: 'Order Lab Test' },
-      { icon: '👤', label: 'Patient Records' },
+    doctor: [
+      { icon: '📅', label: 'View Schedule', path: '/appointments' },
+      { icon: '📋', label: 'Write Prescription', path: '/records' },
+      { icon: '👤', label: 'Patient Records', path: '/patients' },
     ],
-    RECEPTIONIST: [
-      { icon: '➕', label: 'New Appointment' },
-      { icon: '📝', label: 'Check-in Patient' },
-      { icon: '💳', label: 'Process Billing' },
-      { icon: '📞', label: 'Contact Directory' },
-    ],
-    PATIENT: [
-      { icon: '📅', label: 'Book Appointment' },
-      { icon: '💊', label: 'My Prescriptions' },
-      { icon: '🔬', label: 'Lab Reports' },
-      { icon: '👤', label: 'Update Profile' },
+    patient: [
+      { icon: '📅', label: 'Book Appointment', path: '/appointments' },
+      { icon: '👤', label: 'Update Profile', path: '/profile' },
     ],
   };
-  return actions[role] || actions.PATIENT;
+  return actions[role] || actions.patient;
 }
 
 const styles = {

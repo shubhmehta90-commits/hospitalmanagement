@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -18,9 +18,9 @@ export default function LoginPage() {
 
   const validate = () => {
     const errs = {};
-    if (!formData.username.trim()) errs.username = 'Username is required';
+    if (!formData.email.trim()) errs.email = 'Email is required';
     if (!formData.password) errs.password = 'Password is required';
-    else if (formData.password.length < 4) errs.password = 'Password is too short';
+    else if (formData.password.length < 6) errs.password = 'Password must be at least 6 characters';
     return errs;
   };
 
@@ -40,15 +40,15 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await login(formData.username, formData.password);
-      showToast('Login successful!', 'success');
-      setTimeout(() => navigate('/dashboard'), 500);
+      const success = await login(formData.email, formData.password);
+      if (success) {
+        showToast('Login successful!', 'success');
+        setTimeout(() => navigate('/dashboard'), 500);
+      } else {
+        showToast('Invalid email or password.');
+      }
     } catch (err) {
-      const msg =
-        err.response?.data?.errors?.non_field_errors?.[0] ||
-        err.response?.data?.message ||
-        'Login failed. Please try again.';
-      showToast(msg);
+      showToast(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -90,20 +90,20 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} style={styles.form}>
             <div className="form-group">
-              <label className="form-label" htmlFor="username">Username</label>
+              <label className="form-label" htmlFor="email">Email Address</label>
               <input
-                id="username"
-                name="username"
-                type="text"
-                className={`form-input ${errors.username ? 'error' : ''}`}
-                placeholder="Enter your username"
-                value={formData.username}
+                id="email"
+                name="email"
+                type="email"
+                className={`form-input ${errors.email ? 'error' : ''}`}
+                placeholder="Enter your email"
+                value={formData.email}
                 onChange={handleChange}
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
               />
-              {errors.username && (
-                <span className="form-error">⚠ {errors.username}</span>
+              {errors.email && (
+                <span className="form-error">⚠ {errors.email}</span>
               )}
             </div>
 
@@ -141,13 +141,29 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Footer */}
           <div style={styles.footer}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+            <div style={styles.emergencyContainer}>
+              <div style={styles.emergencyHeading}>Emergency Assistance</div>
+              <div style={styles.emergencyItem}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--error-400)' }}>
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 18.92z"/>
+                </svg>
+                <span style={styles.emergencyText}>+1 (800) MED-HELP</span>
+              </div>
+              <div style={styles.emergencyItem}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary-400)' }}>
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <span style={styles.emergencyText}>emergency@medportal.com</span>
+              </div>
+            </div>
+
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 16, display: 'block' }}>
               Don't have an account?{' '}
-              <a href="#" style={{ color: 'var(--primary-400)', fontWeight: 500 }}>
-                Contact Admin
-              </a>
+              <Link to="/register" style={{ color: 'var(--primary-400)', fontWeight: 500 }}>
+                Register as Member
+              </Link>
             </span>
           </div>
         </div>
@@ -236,5 +252,34 @@ const styles = {
   branding: {
     fontSize: '0.75rem',
     color: 'var(--text-muted)',
+  },
+  emergencyContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    padding: '16px',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: '12px',
+    border: '1px solid var(--border-subtle)',
+    marginBottom: 16,
+  },
+  emergencyHeading: {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: 'var(--text-primary)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    textAlign: 'left',
+    marginBottom: 4,
+  },
+  emergencyItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  emergencyText: {
+    fontSize: '0.875rem',
+    color: 'var(--text-secondary)',
+    fontWeight: 500,
   },
 };

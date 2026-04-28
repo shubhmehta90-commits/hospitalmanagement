@@ -13,6 +13,7 @@ class CustomUser(AbstractUser):
         DOCTOR = 'DOCTOR', 'Doctor'
         RECEPTIONIST = 'RECEPTIONIST', 'Receptionist'
         PATIENT = 'PATIENT', 'Patient'
+        DRIVER = 'DRIVER', 'Ambulance Driver'
 
     role = models.CharField(
         max_length=20,

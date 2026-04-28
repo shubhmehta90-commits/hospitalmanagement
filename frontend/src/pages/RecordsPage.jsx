@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
-
-import api from '../api/axios'; // Assuming axios is properly configured
+import { supabase } from '../lib/supabaseClient';
 
 export default function RecordsPage() {
   const { user } = useAuth();
-  const isDoctor = user?.role === 'DOCTOR';
-  const isPatient = user?.role === 'PATIENT';
+  const isDoctor = user?.role === 'doctor';
+  const isAdmin = user?.role === 'admin';
+  const isPatient = user?.role === 'patient';
 
-  const [diagnoses, setDiagnoses] = useState([]);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [reports, setReports] = useState([]);
+  const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // For doctor view: selecting a patient
@@ -24,30 +22,29 @@ export default function RecordsPage() {
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
-    if (isDoctor) {
+    if (isDoctor || isAdmin) {
       fetchPatients();
     } else {
       fetchRecords(); // Fetch for logged in patient
     }
-  }, [isDoctor]);
+  }, [isDoctor, isAdmin]);
 
   useEffect(() => {
-    if (isDoctor && selectedPatient) {
+    if ((isDoctor || isAdmin) && selectedPatient) {
       fetchRecords(selectedPatient);
-    } else if (isDoctor && !selectedPatient) {
-      // Clear records if no patient is selected
-      setDiagnoses([]);
-      setPrescriptions([]);
-      setReports([]);
+    } else if ((isDoctor || isAdmin) && !selectedPatient) {
+      setRecords([]);
       setLoading(false);
     }
-  }, [selectedPatient, isDoctor]);
+  }, [selectedPatient, isDoctor, isAdmin]);
 
   const fetchPatients = async () => {
     try {
-      // Assuming GET /api/users/?role=PATIENT is available
-      const res = await api.get('/api/users/?role=PATIENT');
-      setPatients(res.data.results || res.data);
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*, profile:profiles(full_name)');
+      if (error) throw error;
+      setPatients(data || []);
     } catch (error) {
       console.error('Failed to fetch patients', error);
     }
@@ -56,15 +53,22 @@ export default function RecordsPage() {
   const fetchRecords = async (patientId = null) => {
     setLoading(true);
     try {
-      const suffix = patientId ? `?patient=${patientId}` : '';
-      const [diagRes, presRes, repRes] = await Promise.all([
-        api.get(`/api/records/diagnoses/${suffix}`),
-        api.get(`/api/records/prescriptions/${suffix}`),
-        api.get(`/api/records/reports/${suffix}`)
-      ]);
-      setDiagnoses(diagRes.data.results || diagRes.data);
-      setPrescriptions(presRes.data.results || presRes.data);
-      setReports(repRes.data.results || repRes.data);
+      let query = supabase
+        .from('medical_records')
+        .select(`
+          *,
+          doctor:doctors(profile:profiles(full_name))
+        `);
+      
+      if (patientId) {
+        query = query.eq('patient_id', patientId);
+      } else {
+        query = query.eq('patient_id', user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      setRecords(data || []);
     } catch (error) {
       console.error('Failed to fetch records', error);
     } finally {
@@ -85,20 +89,29 @@ export default function RecordsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const endpoint = 
-        modalType === 'diagnosis' ? '/api/records/diagnoses/' :
-        modalType === 'prescription' ? '/api/records/prescriptions/' :
-        '/api/records/reports/';
-      
-      const payload = { ...formData, patient: selectedPatient };
-      await api.post(endpoint, payload);
+      const payload = {
+        patient_id: selectedPatient,
+        doctor_id: isDoctor ? user.id : (isAdmin ? user.id : null), 
+        type: modalType,
+        title: formData.title,
+        content: formData.content,
+        metadata: formData.metadata || {}
+      };
+
+      const { error } = await supabase.from('medical_records').insert([payload]);
+      if (error) throw error;
+
       setShowModal(false);
-      fetchRecords(selectedPatient); // refresh
+      fetchRecords(selectedPatient);
     } catch (error) {
       console.error(`Failed to create ${modalType}`, error);
-      alert(`Error creating ${modalType}`);
+      alert(`Error creating ${modalType}: ` + error.message);
     }
   };
+
+  const diagnoses = records.filter(r => r.type === 'diagnosis');
+  const prescriptions = records.filter(r => r.type === 'prescription');
+  const reports = records.filter(r => r.type === 'report');
 
   return (
     <div style={styles.layout}>
@@ -108,10 +121,10 @@ export default function RecordsPage() {
           <div>
             <h1 style={styles.title}>Medical Records</h1>
             <p style={styles.subtitle}>
-              {isDoctor ? 'Manage and view patient histories.' : 'View your complete medical history.'}
+              {(isDoctor || isAdmin) ? 'Manage and view patient histories.' : 'View your complete medical history.'}
             </p>
           </div>
-          {isDoctor && selectedPatient && (
+          {(isDoctor || isAdmin) && selectedPatient && (
             <div style={styles.headerActions}>
               <button className="btn btn-primary" onClick={() => openModal('diagnosis')}>+ Diagnosis</button>
               <button className="btn btn-primary" onClick={() => openModal('prescription')}>+ Prescription</button>
@@ -120,7 +133,7 @@ export default function RecordsPage() {
           )}
         </header>
 
-        {isDoctor && (
+        {(isDoctor || isAdmin) && (
           <div className="glass-card" style={styles.patientSelector}>
             <label style={styles.label}>Select Patient to View/Edit Records:</label>
             <select
@@ -130,7 +143,7 @@ export default function RecordsPage() {
             >
               <option value="">-- Choose a Patient --</option>
               {patients.map(p => (
-                <option key={p.id} value={p.id}>{p.full_name || p.username} ({p.username})</option>
+                <option key={p.id} value={p.id}>{p.profile?.full_name}</option>
               ))}
             </select>
           </div>
@@ -138,7 +151,7 @@ export default function RecordsPage() {
 
         {loading ? (
           <div style={styles.loading}>Loading records...</div>
-        ) : (isDoctor && !selectedPatient) ? (
+        ) : ((isDoctor || isAdmin) && !selectedPatient) ? (
           <div style={styles.emptyState}>Please select a patient to view their records.</div>
         ) : (
           <div style={styles.contentGrid}>
@@ -149,11 +162,11 @@ export default function RecordsPage() {
                   {diagnoses.map(d => (
                     <li key={d.id} style={styles.listItem}>
                       <div style={styles.itemHeader}>
-                        <strong>{d.condition}</strong>
-                        <span style={styles.badge}>{d.status}</span>
+                        <strong>{d.title}</strong>
+                        <span style={styles.badge}>{d.metadata?.status || 'Active'}</span>
                       </div>
-                      <p style={styles.itemDesc}>{d.description}</p>
-                      <small style={styles.itemMeta}>Diagnosed: {d.date_diagnosed} by Dr. {d.doctor_name}</small>
+                      <p style={styles.itemDesc}>{d.content}</p>
+                      <small style={styles.itemMeta}>Diagnosed: {new Date(d.created_at).toLocaleDateString()} by Dr. {d.doctor?.profile?.full_name || 'N/A'}</small>
                     </li>
                   ))}
                 </ul>
@@ -167,11 +180,10 @@ export default function RecordsPage() {
                   {prescriptions.map(p => (
                     <li key={p.id} style={styles.listItem}>
                       <div style={styles.itemHeader}>
-                        <strong>{p.medication_name}</strong>
+                        <strong>{p.title}</strong>
                       </div>
-                      <p style={styles.itemDesc}>{p.dosage} - {p.frequency} ({p.duration})</p>
-                      {p.notes && <p style={styles.itemDesc}>Notes: {p.notes}</p>}
-                      <small style={styles.itemMeta}>Prescribed: {p.date_prescribed} by Dr. {p.doctor_name}</small>
+                      <p style={styles.itemDesc}>{p.content}</p>
+                      <small style={styles.itemMeta}>Prescribed: {new Date(p.created_at).toLocaleDateString()} by Dr. {p.doctor?.profile?.full_name || 'N/A'}</small>
                     </li>
                   ))}
                 </ul>
@@ -185,15 +197,10 @@ export default function RecordsPage() {
                   {reports.map(r => (
                     <li key={r.id} style={styles.listItem}>
                       <div style={styles.itemHeader}>
-                        <strong>{r.report_type}</strong>
+                        <strong>{r.title}</strong>
                       </div>
-                      <p style={styles.itemDesc}>{r.summary}</p>
-                      {r.document_url && (
-                        <a href={r.document_url} target="_blank" rel="noreferrer" style={styles.link}>
-                          View Document
-                        </a>
-                      )}
-                      <small style={styles.itemMeta}>Generated: {r.date_generated} by Dr. {r.doctor_name}</small>
+                      <p style={styles.itemDesc}>{r.content}</p>
+                      <small style={styles.itemMeta}>Generated: {new Date(r.created_at).toLocaleDateString()} by Dr. {r.doctor?.profile?.full_name || 'N/A'}</small>
                     </li>
                   ))}
                 </ul>
@@ -209,35 +216,8 @@ export default function RecordsPage() {
           <div className="glass-card fade-in" style={styles.modalContent}>
             <h2 style={styles.modalTitle}>Add New {modalType}</h2>
             <form onSubmit={handleSubmit} style={styles.form}>
-              {modalType === 'diagnosis' && (
-                <>
-                  <input style={styles.input} type="text" name="condition" placeholder="Condition" required onChange={handleInputChange} />
-                  <textarea style={styles.textarea} name="description" placeholder="Description" onChange={handleInputChange} />
-                  <input style={styles.input} type="date" name="date_diagnosed" required onChange={handleInputChange} />
-                  <select style={styles.select} name="status" defaultValue="ACTIVE" onChange={handleInputChange}>
-                    <option value="ACTIVE">Active</option>
-                    <option value="RESOLVED">Resolved</option>
-                    <option value="CHRONIC">Chronic</option>
-                  </select>
-                </>
-              )}
-              {modalType === 'prescription' && (
-                <>
-                  <input style={styles.input} type="text" name="medication_name" placeholder="Medication Name" required onChange={handleInputChange} />
-                  <input style={styles.input} type="text" name="dosage" placeholder="Dosage (e.g., 500mg)" required onChange={handleInputChange} />
-                  <input style={styles.input} type="text" name="frequency" placeholder="Frequency (e.g., Twice a day)" required onChange={handleInputChange} />
-                  <input style={styles.input} type="text" name="duration" placeholder="Duration (e.g., 7 days)" required onChange={handleInputChange} />
-                  <textarea style={styles.textarea} name="notes" placeholder="Additional Notes" onChange={handleInputChange} />
-                </>
-              )}
-              {modalType === 'report' && (
-                <>
-                  <input style={styles.input} type="text" name="report_type" placeholder="Report Type (e.g., X-Ray)" required onChange={handleInputChange} />
-                  <textarea style={styles.textarea} name="summary" placeholder="Summary" onChange={handleInputChange} />
-                  <input style={styles.input} type="url" name="document_url" placeholder="Document URL" onChange={handleInputChange} />
-                  <input style={styles.input} type="date" name="date_generated" required onChange={handleInputChange} />
-                </>
-              )}
+              <input style={styles.input} type="text" name="title" placeholder={`${modalType} Title`} required onChange={handleInputChange} />
+              <textarea style={styles.textarea} name="content" placeholder="Details/Notes" onChange={handleInputChange} />
               <div style={styles.modalActions}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Save</button>

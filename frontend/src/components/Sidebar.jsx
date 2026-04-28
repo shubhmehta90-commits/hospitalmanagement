@@ -2,34 +2,20 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const menuConfig = {
-  ADMIN: [
-    { icon: '📊', label: 'Dashboard', path: '/dashboard' },
-    { icon: '👥', label: 'Users', path: '/users' },
-    { icon: '🩺', label: 'Doctors', path: '/doctors' },
-    { icon: '📅', label: 'Appointments', path: '/appointments' },
-    { icon: '📈', label: 'Reports', path: '/reports' },
-    { icon: '⚙️', label: 'Settings', path: '/settings' },
-  ],
-  DOCTOR: [
-    { icon: '📊', label: 'Dashboard', path: '/dashboard' },
-    { icon: '📅', label: 'My Appointments', path: '/appointments' },
-    { icon: '👥', label: 'Patients', path: '/patients' },
-    { icon: '🗓️', label: 'Schedule', path: '/schedule' },
-    { icon: '📋', label: 'Prescriptions', path: '/prescriptions' },
-  ],
-  RECEPTIONIST: [
+  admin: [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📅', label: 'Appointments', path: '/appointments' },
-    { icon: '👥', label: 'Patients', path: '/patients' },
-    { icon: '💳', label: 'Billing', path: '/billing' },
-    { icon: '📞', label: 'Directory', path: '/directory' },
+    { icon: '📄', label: 'Medical Records', path: '/records' },
   ],
-  PATIENT: [
+  doctor: [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📅', label: 'My Appointments', path: '/appointments' },
     { icon: '📄', label: 'Medical Records', path: '/records' },
-    { icon: '💊', label: 'Prescriptions', path: '/prescriptions' },
-    { icon: '👤', label: 'Profile', path: '/profile' },
+  ],
+  patient: [
+    { icon: '📊', label: 'Dashboard', path: '/dashboard' },
+    { icon: '📅', label: 'My Appointments', path: '/appointments' },
+    { icon: '📄', label: 'Medical Records', path: '/records' },
   ],
 };
 
@@ -38,8 +24,8 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const role = user?.role || 'PATIENT';
-  const items = menuConfig[role] || menuConfig.PATIENT;
+  const role = user?.role || 'patient';
+  const items = menuConfig[role] || menuConfig.patient;
 
   const handleLogout = () => {
     logout();
@@ -89,15 +75,13 @@ export default function Sidebar() {
       <div style={styles.userSection}>
         <div style={styles.userInfo}>
           <div style={styles.avatar}>
-            {(user?.first_name?.[0] || user?.username?.[0] || '?').toUpperCase()}
+            {(user?.full_name?.[0] || '?').toUpperCase()}
           </div>
           <div style={styles.userDetails}>
             <div style={styles.userName}>
-              {user?.first_name && user?.last_name
-                ? `${user.first_name} ${user.last_name}`
-                : user?.username}
+              {user?.full_name || 'User'}
             </div>
-            <div style={styles.userRole}>{user?.role_display || role}</div>
+            <div style={styles.userRole}>{role}</div>
           </div>
         </div>
         <button onClick={handleLogout} style={styles.logoutBtn} title="Sign out">
