@@ -63,7 +63,7 @@ export default function RecordsPage() {
       if (patientId) {
         query = query.eq('patient_id', patientId);
       } else {
-        query = query.eq('patient_id', user.id);
+        query = query.eq('patient_id', currentUser.id);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -91,7 +91,7 @@ export default function RecordsPage() {
     try {
       const payload = {
         patient_id: selectedPatient,
-        doctor_id: isDoctor ? user.id : (isAdmin ? user.id : null), 
+        doctor_id: isDoctor ? currentUser.id : (isAdmin ? currentUser.id : null), 
         type: modalType,
         title: formData.title,
         content: formData.content,

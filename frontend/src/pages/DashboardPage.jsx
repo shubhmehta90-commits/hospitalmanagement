@@ -16,10 +16,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (currentUser) {
       fetchDashboardData();
     }
-  }, [user]);
+  }, [currentUser]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -40,7 +40,7 @@ export default function DashboardPage() {
         const { count: myAppointments } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: true })
-          .eq('doctor_id', user.id);
+          .eq('doctor_id', currentUser.id);
         
         dynamicStats = [
           { label: 'My Appointments', value: myAppointments || 0, icon: '📅', color: 'teal' },
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         const { count: upcoming } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: true })
-          .eq('patient_id', user.id);
+          .eq('patient_id', currentUser.id);
         
         dynamicStats = [
           { label: 'My Visits', value: upcoming || 0, icon: '📅', color: 'purple' },
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         <header style={styles.header}>
           <div>
             <h1 style={styles.greeting}>
-              {greeting}, <span style={styles.name}>{user?.full_name || 'User'}</span> 👋
+              {greeting}, <span style={styles.name}>{currentUser?.full_name || 'User'}</span> 👋
             </h1>
             <p style={styles.roleTag}>
               <span style={styles.roleBadge}>{role}</span>

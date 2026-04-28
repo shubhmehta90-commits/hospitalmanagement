@@ -35,7 +35,7 @@ export default function AppointmentsPage() {
     if (isAdmin) {
       fetchPatients();
     }
-  }, [user]);
+  }, [currentUser]);
 
   const fetchAppointments = async () => {
     try {
@@ -48,9 +48,9 @@ export default function AppointmentsPage() {
         `);
 
       if (isDoctor) {
-        query = query.eq('doctor_id', user.id);
+        query = query.eq('doctor_id', currentUser.id);
       } else if (isPatient) {
-        query = query.eq('patient_id', user.id);
+        query = query.eq('patient_id', currentUser.id);
       }
 
       const { data, error } = await query;
@@ -104,7 +104,7 @@ export default function AppointmentsPage() {
         time: formData.time,
         reason: formData.reason,
         doctor_id: formData.doctor,
-        patient_id: isPatient ? user.id : formData.patient,
+        patient_id: isPatient ? currentUser.id : formData.patient,
         status: 'pending'
       };
 
