@@ -4,7 +4,7 @@ import { useAuth, ROLES } from '../context/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, authError } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -67,7 +67,7 @@ export default function RegisterPage() {
         showToast('Registration successful! Redirecting to login...', 'success');
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        showToast('Registration failed. Please try again.');
+        showToast(authError || 'Registration failed. Please try again.');
       }
     } catch (err) {
       showToast(err.message || 'An error occurred during registration.');

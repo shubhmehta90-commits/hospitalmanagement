@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authError } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
@@ -45,7 +45,7 @@ export default function LoginPage() {
         showToast('Login successful!', 'success');
         setTimeout(() => navigate('/dashboard'), 500);
       } else {
-        showToast('Invalid email or password.');
+        showToast(authError || 'Invalid email or password.');
       }
     } catch (err) {
       showToast(err.message || 'Login failed. Please try again.');
