@@ -17,7 +17,23 @@ function PrivateRoute({ children }) {
 }
 
 function AppContent() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-screen" style={{ 
+        display: 'flex', 
+        height: '100vh', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'var(--bg-dark)',
+        color: 'var(--text-primary)'
+      }}>
+        <div className="spinner" style={{ marginRight: 12 }} />
+        Initializing System...
+      </div>
+    );
+  }
 
   return (
     <Router>

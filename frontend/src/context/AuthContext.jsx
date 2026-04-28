@@ -153,7 +153,7 @@ export function AuthProvider({ children }) {
     isRole: (...roles) => roles.includes(currentUser?.role),
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
