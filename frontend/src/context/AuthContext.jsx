@@ -51,12 +51,19 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setCurrentUser({ ...session.user, ...profile });
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          setCurrentUser({ ...session.user, ...profile });
+        }
+      } catch (error) {
+        console.error("Auth Initialization Error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();

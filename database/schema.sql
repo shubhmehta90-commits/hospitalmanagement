@@ -55,16 +55,33 @@ CREATE POLICY "user can update own profile"
 ON profiles FOR UPDATE
 USING (auth.uid() = id);
 
+CREATE POLICY "user can insert own profile"
+ON profiles FOR INSERT
+WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "authenticated users can view profiles"
+ON profiles FOR SELECT
+TO authenticated
+USING (true);
+
 -- Doctors Policies
 CREATE POLICY "anyone can view doctors list"
 ON doctors FOR SELECT
 TO authenticated
 USING (true);
 
+CREATE POLICY "doctor can insert own record"
+ON doctors FOR INSERT
+WITH CHECK (auth.uid() = id);
+
 -- Patients Policies
 CREATE POLICY "patient can view own data"
 ON patients FOR SELECT
 USING (auth.uid() = id);
+
+CREATE POLICY "patient can insert own record"
+ON patients FOR INSERT
+WITH CHECK (auth.uid() = id);
 
 -- Appointments Policies
 CREATE POLICY "patient can view own"
@@ -82,6 +99,11 @@ USING (auth.uid() = doctor_id);
 CREATE POLICY "doctor can update assigned"
 ON appointments FOR UPDATE
 USING (auth.uid() = doctor_id);
+
+CREATE POLICY "admin can view all"
+ON appointments FOR SELECT
+TO authenticated
+USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- 5. Medical Records table
 CREATE TABLE IF NOT EXISTS medical_records (
