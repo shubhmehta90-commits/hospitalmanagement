@@ -106,10 +106,16 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async (formData) => {
     setAuthError(null);
     
-    // 1. Create user in Supabase Auth
+    // 1. Create user in Supabase Auth with metadata
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
+      options: {
+        data: {
+          full_name: formData.fullName,
+          role: formData.role,
+        }
+      }
     });
     
     if (authError) {
@@ -119,23 +125,7 @@ export function AuthProvider({ children }) {
 
     const userId = authData.user.id;
 
-    // 2. Insert into profiles
-    const { error: profileError } = await supabase.from('profiles').insert([
-      { 
-        id: userId, 
-        role: formData.role, 
-        full_name: formData.fullName, 
-        email: formData.email 
-      }
-    ]);
-
-    if (profileError) {
-      console.error("Profile Error:", profileError);
-      setAuthError(profileError.message);
-      return { success: false };
-    }
-
-    // 3. Insert into role-specific table
+    // 2. Insert into role-specific table (profiles is now handled by DB trigger)
     if (formData.role === ROLES.PATIENT) {
       const { error: patientError } = await supabase.from('patients').insert([
         { id: userId, age: formData.age, gender: formData.gender }
