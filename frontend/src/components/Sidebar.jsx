@@ -20,11 +20,11 @@ const menuConfig = {
 };
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const role = user?.role || 'patient';
+  const role = currentUser?.role || 'patient';
   const items = menuConfig[role] || menuConfig.patient;
 
   const handleLogout = () => {
@@ -75,11 +75,11 @@ export default function Sidebar() {
       <div style={styles.userSection}>
         <div style={styles.userInfo}>
           <div style={styles.avatar}>
-            {(user?.full_name?.[0] || '?').toUpperCase()}
+            {(currentUser?.full_name?.[0] || '?').toUpperCase()}
           </div>
           <div style={styles.userDetails}>
             <div style={styles.userName}>
-              {user?.full_name || 'User'}
+              {currentUser?.full_name || 'User'}
             </div>
             <div style={styles.userRole}>{role}</div>
           </div>

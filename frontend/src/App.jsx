@@ -7,24 +7,24 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import RecordsPage from './pages/RecordsPage';
 
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
   
   if (loading) {
     return <div className="loading-screen">Loading...</div>;
   }
   
-  return user ? children : <Navigate to="/login" />;
+  return currentUser ? children : <Navigate to="/login" />;
 }
 
 function AppContent() {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
 
   return (
     <Router>
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/login" element={!currentUser ? <LoginPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/register" element={!currentUser ? <RegisterPage /> : <Navigate to="/dashboard" />} />
         
         {/* Private Routes */}
         <Route path="/dashboard" element={

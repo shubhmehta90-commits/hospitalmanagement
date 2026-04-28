@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const role = user?.role || 'patient';
+  const { currentUser } = useAuth();
+  const isDoctor = currentUser?.role === 'doctor';
+  const isAdmin = currentUser?.role === 'admin';
+  const role = currentUser?.role || 'patient';
   const greeting = getGreeting();
 
   const [stats, setStats] = useState([]);

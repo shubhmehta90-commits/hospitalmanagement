@@ -4,10 +4,10 @@ import Sidebar from '../components/Sidebar';
 import { supabase } from '../lib/supabaseClient';
 
 export default function AppointmentsPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const isDoctor = user?.role === 'doctor';
-  const isPatient = user?.role === 'patient';
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
+  const isDoctor = currentUser?.role === 'doctor';
+  const isPatient = currentUser?.role === 'patient';
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);

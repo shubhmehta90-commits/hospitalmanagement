@@ -4,10 +4,10 @@ import Sidebar from '../components/Sidebar';
 import { supabase } from '../lib/supabaseClient';
 
 export default function RecordsPage() {
-  const { user } = useAuth();
-  const isDoctor = user?.role === 'doctor';
-  const isAdmin = user?.role === 'admin';
-  const isPatient = user?.role === 'patient';
+  const { currentUser } = useAuth();
+  const isDoctor = currentUser?.role === 'doctor';
+  const isAdmin = currentUser?.role === 'admin';
+  const isPatient = currentUser?.role === 'patient';
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
