@@ -5,6 +5,11 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import RecordsPage from './pages/RecordsPage';
+import PatientsPage from './pages/PatientsPage';
+import DoctorsPage from './pages/DoctorsPage';
+import PharmacyPage from './pages/PharmacyPage';
+import LabsPage from './pages/LabsPage';
+import BillingPage from './pages/BillingPage';
 
 function PrivateRoute({ children }) {
   const { currentUser, loading } = useAuth();
@@ -56,6 +61,31 @@ function AppContent() {
         <Route path="/records" element={
           <PrivateRoute>
             <RecordsPage />
+          </PrivateRoute>
+        } />
+        <Route path="/patients" element={
+          <PrivateRoute>
+            <PatientsPage />
+          </PrivateRoute>
+        } />
+        <Route path="/doctors" element={
+          <PrivateRoute>
+            <DoctorsPage />
+          </PrivateRoute>
+        } />
+        <Route path="/pharmacy" element={
+          <PrivateRoute>
+            <PharmacyPage />
+          </PrivateRoute>
+        } />
+        <Route path="/labs" element={
+          <PrivateRoute>
+            <LabsPage />
+          </PrivateRoute>
+        } />
+        <Route path="/billing" element={
+          <PrivateRoute>
+            <BillingPage />
           </PrivateRoute>
         } />
         

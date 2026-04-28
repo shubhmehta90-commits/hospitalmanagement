@@ -5,17 +5,27 @@ const menuConfig = {
   admin: [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📅', label: 'Appointments', path: '/appointments' },
+    { icon: '👥', label: 'Patients', path: '/patients' },
+    { icon: '🩺', label: 'Doctors', path: '/doctors' },
     { icon: '📄', label: 'Medical Records', path: '/records' },
+    { icon: '💊', label: 'Pharmacy', path: '/pharmacy' },
+    { icon: '🧪', label: 'Labs & Reports', path: '/labs' },
+    { icon: '💰', label: 'Billing', path: '/billing' },
   ],
   doctor: [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📅', label: 'My Appointments', path: '/appointments' },
+    { icon: '👥', label: 'Patients', path: '/patients' },
     { icon: '📄', label: 'Medical Records', path: '/records' },
+    { icon: '💊', label: 'Pharmacy', path: '/pharmacy' },
+    { icon: '🧪', label: 'Labs', path: '/labs' },
   ],
   patient: [
     { icon: '📊', label: 'Dashboard', path: '/dashboard' },
     { icon: '📅', label: 'My Appointments', path: '/appointments' },
-    { icon: '📄', label: 'Medical Records', path: '/records' },
+    { icon: '📄', label: 'My Records', path: '/records' },
+    { icon: '🧪', label: 'Test Results', path: '/labs' },
+    { icon: '💰', label: 'My Bills', path: '/billing' },
   ],
 };
 
