@@ -172,11 +172,11 @@ CREATE TABLE IF NOT EXISTS billing (
 
 ALTER TABLE billing ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY 'patient can view own bills'
+CREATE POLICY "patient can view own bills"
 ON billing FOR SELECT
 USING (auth.uid() = patient_id);
 
-CREATE POLICY 'admin can manage bills'
+CREATE POLICY "admin can manage bills"
 ON billing FOR ALL
 TO authenticated
 USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));

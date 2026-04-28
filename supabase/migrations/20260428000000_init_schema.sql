@@ -159,3 +159,24 @@ USING (auth.uid() = doctor_id);
 CREATE POLICY "admin has full access to profiles"
 ON profiles FOR ALL
 USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+-- 6. Billing table
+CREATE TABLE IF NOT EXISTS billing (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  patient_id UUID REFERENCES patients(id) ON DELETE CASCADE NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
+  description TEXT,
+  due_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE billing ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "patient can view own bills"
+ON billing FOR SELECT
+USING (auth.uid() = patient_id);
+
+CREATE POLICY "admin can manage bills"
+ON billing FOR ALL
+TO authenticated
+USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
