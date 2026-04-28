@@ -1,3 +1,11 @@
+-- Cleanup existing (if any) to avoid conflicts with old enums/tables
+DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS medical_records CASCADE;
+DROP TABLE IF EXISTS doctors CASCADE;
+DROP TABLE IF EXISTS patients CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP TYPE IF EXISTS app_role CASCADE;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
