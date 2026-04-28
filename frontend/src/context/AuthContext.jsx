@@ -51,6 +51,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initAuth = async () => {
+      // Safety timeout: Never stay stuck for more than 5 seconds
+      const timeout = setTimeout(() => {
+        console.warn("Auth initialization timed out.");
+        setLoading(false);
+      }, 5000);
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
@@ -62,13 +68,14 @@ export function AuthProvider({ children }) {
       } catch (error) {
         console.error("Auth Initialization Error:", error);
       } finally {
+        clearTimeout(timeout);
         setLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const profile = await fetchProfile(session.user.id);
         setCurrentUser({ ...session.user, ...profile });
@@ -78,7 +85,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
