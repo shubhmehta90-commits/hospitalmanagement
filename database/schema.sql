@@ -9,9 +9,9 @@ DROP TYPE IF EXISTS app_role CASCADE;
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Profiles table (extends auth.users)
+-- 1. Profiles table
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  id UUID PRIMARY KEY, -- Removed FK to auth.users for easier testing/dummy data
   full_name TEXT,
   email TEXT,
   role TEXT CHECK (role IN ('admin', 'doctor', 'patient')),
